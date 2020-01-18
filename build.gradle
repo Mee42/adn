@@ -12,6 +12,7 @@ sourceCompatibility = 1.9
 
 repositories {
     mavenCentral()
+    jcenter()
 }
 test {
     useJUnitPlatform()
@@ -19,7 +20,9 @@ test {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     testImplementation 'io.kotlintest:kotlintest-runner-junit5:3.3.2'
-    testImplementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+    implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+    implementation 'com.github.kittinunf.fuel:fuel:2.2.1'
+    implementation "com.sparkjava:spark-kotlin:1.0.0-alpha"
 }
 
 compileKotlin {

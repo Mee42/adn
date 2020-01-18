@@ -49,6 +49,14 @@ object Config {
         return getServerForAlias("default") ?: DEFAULT_DEFAULT_SERVER
     }
 
+    fun printAliases() {
+        println(">> aliases")
+        for((key,value) in map) {
+            println(key + ":" + value.asString())
+        }
+        println("<<")
+    }
+
     val LOCALHOST_DEFAULT_DEFAULT_PATH = "${System.getProperty("user.home")}/.adn/data"
     private val DEFAULT_DEFAULT_SERVER = LocalhostServer(LOCALHOST_DEFAULT_DEFAULT_PATH)
 

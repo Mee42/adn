@@ -1,32 +1,39 @@
 package dev.mee42
 
-import java.io.File
 import kotlin.system.exitProcess
 
-const val PORT = 7878
 
 val parser = ArgumentParser.of {
     flag(short = 'h', long = "help")
-    flag(short = 'V', long = "version")
+    flag(long = "version")
     flag(short = 'v', long = "verbose")
     flag(long = "license")
     flag(short = 'i', long = "in")
     flag(short = 'o', long = "out")
 
-    flag(short = 't', long = "trim")
-
     arg(short = 's', long = "server")
     arg(short = 'O', long = "output-format")
+    flag(short = 'u', long = "url")
 
-    flag(long = "web-server")
+    arg(short = 'n', long = "name")
+
+    flag(long = "run-server")
+    arg(long = "port")
 }
 
 enum class OutputFormat(val names: List<String>, val desc: String) {
     INPUT(listOf("INPUT"),"exactly what you put in"),
     OUTPUT(listOf("OUTPUT"),"strips external server parameters, perfect for pipes and such"),
     VERBOSE(listOf("VERBOSE"), "prints all information"),
-    URL(listOf("URL"), "in a clickable format - only for external servers")
+    URL(listOf("URL"), "in a clickable format - only for external servers");
+    companion object {
+        fun getForString(str: String) : OutputFormat {
+            return values().firstOrNull { it.names.contains(str.toUpperCase()) }
+                ?: crashAndExit("Can't get output format \"$str\"")
+        }
+    }
 }
+
 
 var verbose = false
 lateinit var parsedArguments :ParsedArguments
@@ -46,19 +53,20 @@ fun main(args: Array<String>) {
             return
         }
         verbose = parsedArguments.isFlagSpecified("verbose")
+        verboseOut("Called: ${args.toList()}")
         if (parsedArguments.isFlagSpecified("help")) {
-            println(genHelpMenu(verbose))
+            println(HELP_MENU)
             return
         }
         if (parsedArguments.isFlagSpecified("version")) {
-            println(genVersionMenu(verbose))
+            println("Version: $VERSION")
             return
         }
         if (parsedArguments.isFlagSpecified("license")) {
             println(LICENSE)
             return
         }
-        if(parsedArguments.isFlagSpecified("webserver")) {
+        if(parsedArguments.isFlagSpecified("run-server")) {
             serverMode()
         }
         Config.init()
@@ -69,7 +77,11 @@ fun main(args: Array<String>) {
         when {
             `in` -> input()
             out -> output()
-            parsedArguments.free.isNotEmpty() -> output()
+            parsedArguments.free.isNotEmpty() -> {
+                verboseOut("Assuming it's output. Free" +
+                        parsedArguments.free.fold("["){it, acc -> "$it,$acc" } + "]")
+                output()
+            }
             else -> {
                 // if there's nothing, it's assumed to be input
                 verboseOut("Assuming it's input")
@@ -77,6 +89,7 @@ fun main(args: Array<String>) {
             }
         }
     } catch (e: Throwable) {
+        System.err.println("Error: ${e.message}")
         if(verbose) e.printStackTrace()
         exitProcess(3)
     }
@@ -86,6 +99,7 @@ fun main(args: Array<String>) {
  * Preconditions: serverString matches spec, including not having any form of ID.
  * */
 fun parseInputServer(serverString: String) :InputServer {
+    verboseOut("parsing input server string \"$serverString\"")
     if(serverString.isBlank()) {
         // no param specifiedCan't find the address in the arguments
 
@@ -111,21 +125,28 @@ fun parseInputServer(serverString: String) :InputServer {
         LocalhostServer(param ?: Config.LOCALHOST_DEFAULT_DEFAULT_PATH)
     } else {
         if(!serverString.contains('.')){
+            if(verbose) Config.printAliases()
             crashAndExit("Can't use `$serverString` - can't find any alias and it's not a url", 2)
         }
         ExternalInputServer(url = serverString, param = param)
     }
 }
 fun parseOutputServer(serverString: String): Pair<OutputServer,String> {
+    verboseOut("parsing output server string \"$serverString\"")
+
     // this has both the ID and the server, so first strip out the ID
     if(serverString.count { it == ':'} > 1) crashAndExit("The server string can only have one ':'", 2)
     if((serverString.startsWith(':') && serverString.count { it == ':' } == 1)
         || !serverString.contains(':')) {
         // okay just use the default server
-        return Config.getDefaultInputServer().toOutput() to serverString
+        // unless... there's a server in the parameter
+        val serverToUse = parsedArguments.getArg("server")
+            ?.let { Config.getServerForAlias(it)?.toOutput() }
+            ?: Config.getDefaultInputServer().toOutput()
+        return serverToUse to serverString
     }
     val id = serverString.split(':')[1]
-    val server = parseInputServer(serverString.split('1')[0])
+    val server = parseInputServer(serverString.split(':')[0])
     if(server is ExternalInputServer && server.param != null) crashAndExit("Output server can not have parameter", 2)
     return server.toOutput() to id
 }
@@ -136,8 +157,11 @@ fun input(){
     verboseOut("using server ${server.asString()}")
 
     val data = System.`in`.readAllBytes()
-    val id = server.post(data)
-    val strOut = when (parsedArguments.getArg("output-format")?.let { OutputFormat.valueOf(it) } ?: OutputFormat.OUTPUT) {
+    val id = server.post(data, parsedArguments.getArg("name"))
+    val  outputFormat = parsedArguments.isFlagSpecified("url").takeIf { it }?.let { OutputFormat.URL }
+                    ?: parsedArguments.getArg("output-format")?.let { OutputFormat.getForString(it) }
+                    ?: OutputFormat.OUTPUT
+    val strOut = when (outputFormat) {
         OutputFormat.INPUT -> parsedArguments.getArg("server")?.let { "$it:" }.orEmpty() + id
         OutputFormat.OUTPUT -> parsedArguments.getArg("server")?.let {
             if(it.contains('(') && server !is LocalhostServer)
@@ -164,17 +188,3 @@ fun output(){
     val bytes = server.get(id = id) ?: crashAndExit("Document does not appear to exist",1)
     System.out.write(bytes)
 }
-
-fun genHelpMenu(v: Boolean): String = """
-todo help menu${"""
-
-BUT NOW IN VERBOSE MODE""" iff v}
-""".trimIndent()
-
-fun genVersionMenu(v: Boolean): String = """
-version: v0.0.1${"""
-Last updated: 2020-01-07""" iff v}
-""".trimIndent()
-
-private infix fun String.iff(yes: Boolean) = if(yes) this else ""
-

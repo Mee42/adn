@@ -41,7 +41,7 @@ Piping text to the default server
     $ echo "Hello, World!" | adn
     $ cat file.txt | adn
   Using a specific server
-    $ echo "text" | adn -s https://adn.mee42.dev
+    $ echo "text" | adn -s [server url]
   Using the localhost cache
     $ echo "text" | adn -s localhost
   Requesting text from the default server

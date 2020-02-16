@@ -54,10 +54,12 @@ class LocalhostServer(val path: String): InputServer, OutputServer {
 
 }
 open class ExternalServer(val url: String): OutputServer {
-    override fun get(id: ID): ByteArray? {
+    init {
         if(!url.startsWith("https://") && !url.startsWith("http://")){
             crashAndExit("url \"$url\" needs to start with http:// or https://",2)
         }
+    }
+    override fun get(id: ID): ByteArray? {
         return ("$url/raw/$id").httpGet()
             .response().let { (_,_,result) ->
                 when(result){
@@ -73,9 +75,11 @@ open class ExternalServer(val url: String): OutputServer {
 fun <A,B> A.applyOperandOptional(operand: B?, block: (A,B) -> A) = if(operand == null) this else block(this,operand)
 
 class ExternalInputServer(val param: String?, url: String): ExternalServer(url), InputServer {
+
     override fun toOutput(): OutputServer = this
     override fun post(data: ByteArray, suggestedID: ID?): ID {
-        val uri = "https://$url/submit" + (param?.let { "/$it" }?:"")
+
+        val uri = "$url/submit" + (param?.let { "/$it" }?:"")
         verboseOut("Connecting to $uri")
         return uri.httpPost()
             .body(data)

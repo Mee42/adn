@@ -1,8 +1,12 @@
 package dev.mee42
 
+import org.eclipse.jetty.http.HttpParser
 import spark.Spark.initExceptionHandler
 import spark.kotlin.*
-import java.util.regex.Pattern
+import java.io.BufferedInputStream
+import java.io.ByteArrayInputStream
+import java.net.URLConnection
+import kotlin.system.exitProcess
 
 
 @Suppress("ControlFlowWithEmptyBody")
@@ -31,10 +35,22 @@ fun inMemoryServer(){
     }
     get("/:id") {
         val initId = this.request.params("id")
-        val (id, lang) = if(initId.contains(".")) {
+        val (id, possibleLang ) = if(initId.contains(".")) {
             val array = initId.split(".",limit = 2)
             array[0] to array[1]
         } else { initId to null }
+        println("DEBUG: possibleLang = $possibleLang")
+        val betterLang = (possibleLang ?: request.queryParams("lang"))
+        println("DEBUG: betterLang = $possibleLang")
+        val lang = betterLang?.let { langMap[it] ?: it }
+        println("hit /$initId with lang = $lang")
+
+        val packet = data[id] ?: throw halt(404, "content not found")
+        val type = URLConnection.guessContentTypeFromStream(BufferedInputStream(ByteArrayInputStream(packet)))
+        if(type?.contains("image") == true) {
+            response.type(type)
+            return@get packet
+        }
         val stringyData = String(data[id] ?: throw halt(200,"""
             <!DOCTYPE html>
             <html>
@@ -48,23 +64,30 @@ fun inMemoryServer(){
             </body>
             </html>
         """.trimIndent()),Charsets.UTF_8)
+        val htmlString = stringyData.replace("&","&amp;").replace("<","&lt;")
+        val descString = htmlString.replace("\"","&quot;")
         """
             <!DOCTYPE html>
             <html>
             <head>
               <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
               <meta name="description" content="${
-        if(stringyData.length > 500) stringyData.substring(0,500) else stringyData
+        if(descString.length > 500) descString.substring(0,500) else descString
         }">
               <title>adn.mee42.dev:$id</title>
               <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/default.min.css">
               <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
-              <script>hljs.initHighlightingOnLoad();</script>
+              ${lang?.let { "<script charset=\"UTF-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.9/languages/$it.min.js\"></script>" } ?: ""}
+              <script src="//cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.7.0/dist/highlightjs-line-numbers.min.js"></script>
+              <script>hljs.initHighlightingOnLoad(); hljs.initLineNumbersOnLoad();</script>
               <style>
               body, html, pre, code {
                   margin: 0;
                   height: 100%;
                   width: 100%;
+              }
+              .hljs-ln-n {
+                  padding-right: 5px;
               }
               </style>
             </head>
@@ -72,7 +95,7 @@ fun inMemoryServer(){
             <pre><code ${
             lang?.let { if(it == "txt") "class=\"plaintext\"" else "class=\"lang-${it}\"" } ?: ""
             }>
-$stringyData
+$htmlString
             </code></pre>
             </body>
             </html>
@@ -80,10 +103,30 @@ $stringyData
 
     }
     get("/raw/:id") {
-        verboseOut("hit /raw/${this.request.params("id")}")
         val id = this.request.params("id")
-        data[id] ?: halt(404, "content not found")
+        verboseOut("hit /raw/$id")
+        val packet = data[id] ?: throw halt(404, "content not found")
+        val type = URLConnection.guessContentTypeFromStream(BufferedInputStream(ByteArrayInputStream(packet)))
+        response.type(type)
+        return@get packet
     }
+    fun RouteHandler.down(filename: String?) : ByteArray{
+        val id = this.request.params("id")
+        verboseOut("hit /down/$id" + filename?.let { "/$it" }.orEmpty())
+        val packet = data[id] ?: throw halt(404, "content not found")
+        val file = filename ?: "$id.bin"
+        response.header("Content-Disposition", "attachment; filename=$file")
+        val type = URLConnection.guessContentTypeFromStream(BufferedInputStream(ByteArrayInputStream(packet)))
+        response.type(type)
+        return packet
+    }
+    get("/down/:id/:filename") {
+        return@get down(this.request.params("filename"))
+    }
+    get("/down/:id") {
+        return@get down(null)
+    }
+
 
     fun RouteHandler.post(param: String) :ID {
         if(param != "default") halt(405, "only param supported is \"default\"")
@@ -101,7 +144,7 @@ $stringyData
         // if requestedName doesn't exist already
         val id = if(requestedName != null && data[requestedName] == null) requestedName else generateID { data[it] != null }
 
-        if(bytes.size > 104857600/*100 MiB*/) halt(406, "content too big")
+        if(bytes.size > 104857600/*100 MiB*/) halt(413, "content too big")
         data[id] = bytes
         return id
     }

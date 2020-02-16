@@ -1,5 +1,6 @@
 package dev.mee42
 
+import java.lang.RuntimeException
 import kotlin.system.exitProcess
 
 
@@ -39,6 +40,9 @@ var verbose = false
 lateinit var parsedArguments :ParsedArguments
 fun crashAndExit(message: String, code: Int = -1): Nothing {
     System.err.println("\n$message")
+    if(verbose) {
+        RuntimeException("" + code).printStackTrace()
+    }
     exitProcess(code)
 }
 fun verboseOut(str: Any) {
@@ -172,7 +176,7 @@ fun input(){
         OutputFormat.URL -> {
             when (server) {
                 is LocalhostServer -> crashAndExit("Can't format localhost as a url", 2)
-                is ExternalInputServer -> "https://${server.url}/$id"
+                is ExternalInputServer -> "${server.url}/$id"
                 else -> crashAndExit("I can't format server \"${server.asString()}\" of type ${server.javaClass.name}", 5)
             }
         }

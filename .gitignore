@@ -1,6 +1,5 @@
 .kotlintest
 .idea
-.gradle
 build/
 
 

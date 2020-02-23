@@ -75,9 +75,10 @@ fun inMemoryServer(){
         if(descString.length > 500) descString.substring(0,500) else descString
         }">
               <title>adn.mee42.dev:$id</title>
-              <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/default.min.css">
+              <link rel="Stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/darcula.min.css">
+              <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.13.1/build/styles/default.min.css">
               <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
-              ${lang?.let { "<script charset=\"UTF-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.9/languages/$it.min.js\"></script>" } ?: ""}
+              ${lang?.let { "<script charset=\"UTF-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/languages/$it.min.js\"></script>" } ?: ""}
               <script src="//cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.7.0/dist/highlightjs-line-numbers.min.js"></script>
               <script>hljs.initHighlightingOnLoad(); hljs.initLineNumbersOnLoad();</script>
               <style>
@@ -88,6 +89,83 @@ fun inMemoryServer(){
               }
               .hljs-ln-n {
                   padding-right: 5px;
+              }
+
+              .hljs {
+                display: block;
+                overflow-x: auto;
+                padding: 0;
+                color: #abb2bf;
+                background: #282c34;
+              }
+
+              .hljs-comment,
+              .hljs-quote {
+                color: #5c6370;
+                font-style: italic;
+              }
+
+              .hljs-doctag,
+              .hljs-keyword,
+              .hljs-formula {
+                color: #c678dd;
+              }
+
+              .hljs-section,
+              .hljs-name,
+              .hljs-selector-tag,
+              .hljs-deletion,
+              .hljs-subst {
+                color: #e06c75;
+              }
+
+              .hljs-literal {
+                color: #56b6c2;
+              }
+
+              .hljs-string,
+              .hljs-regexp,
+              .hljs-addition,
+              .hljs-attribute,
+              .hljs-meta-string {
+                color: #98c379;
+              }
+
+              .hljs-built_in,
+              .hljs-class .hljs-title {
+                color: #e6c07b;
+              }
+
+              .hljs-attr,
+              .hljs-variable,
+              .hljs-template-variable,
+              .hljs-type,
+              .hljs-selector-class,
+              .hljs-selector-attr,
+              .hljs-selector-pseudo,
+              .hljs-number {
+                color: #d19a66;
+              }
+
+              .hljs-symbol,
+              .hljs-bullet,
+              .hljs-link,
+              .hljs-meta,
+              .hljs-selector-id,
+              .hljs-title {
+                color: #61aeee;
+              }
+
+              .hljs-emphasis {
+                font-style: italic;
+              }
+
+              .hljs-strong {
+                font-weight: bold;
+              }
+
+              .hljs-link {
+                text-decoration: underline;
               }
               </style>
             </head>

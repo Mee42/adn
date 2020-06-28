@@ -123,7 +123,7 @@ fun parseInputServer(serverString: String) :InputServer {
             null -> {}
             is LocalhostServer -> return LocalhostServer(param ?: alias.path)
             is ExternalInputServer -> return ExternalInputServer(url = alias.url, param = param ?: alias.param)
-            else -> crashAndExit("alias is not a known type", 5)
+            else -> crashAndExit("alias is not a known type ", 5)
     }
     return if(name == "localhost") {
         LocalhostServer(param ?: Config.LOCALHOST_DEFAULT_DEFAULT_PATH)

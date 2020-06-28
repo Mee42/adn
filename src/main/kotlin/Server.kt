@@ -1,27 +1,26 @@
 package dev.mee42
 
-import org.eclipse.jetty.http.HttpParser
 import spark.Spark.initExceptionHandler
-import spark.kotlin.*
+import spark.kotlin.RouteHandler
+import spark.kotlin.get
+import spark.kotlin.halt
+import spark.kotlin.post
 import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.net.URLConnection
-import kotlin.system.exitProcess
 
 
-@Suppress("ControlFlowWithEmptyBody")
-fun serverMode(): Nothing {
+fun serverMode() {
     // start a simple https server
     verboseOut("Started server")
     val port = parsedArguments.getArg("port")?.toInt() ?: error("No port specified")
     println("Running at port $port")
-    port(port)
-    initExceptionHandler { it.printStackTrace() }
-    inMemoryServer()
-    while(true){}
+    inMemoryServer(port)
+    while(true) { Thread.sleep(1000) }
 }
-
-fun inMemoryServer(){
+fun inMemoryServer(port: Int){
+    spark.kotlin.port(port)
+    initExceptionHandler { it.printStackTrace() }
     verboseOut("Started in memory server")
     val data = mutableMapOf<ID,ByteArray>()
     get("/") {
